@@ -1,0 +1,135 @@
+{
+  "candidate": {
+    "name": "Mike Verwer",
+    "career_stage": "junior",
+    "target_roles": [
+      "Data Engineer", 
+      "ML Engineer", 
+      "Data Analyst", 
+      "BI Developer"
+    ],
+    "strong_skills": [
+      "Python", 
+      "SQL", 
+      "statistics", 
+      "scikit-learn", 
+      "Tableau", 
+      "n8n", 
+      "Docker", 
+      "Ollama"
+    ],
+    "building_skills": [
+      "Power BI"
+    ],
+    "skill_gaps": [
+      "dbt", 
+      "Airflow", 
+      "Spark", 
+      "Databricks", 
+      "BigQuery", 
+      "Snowflake", 
+      "Redshift", 
+      "MLOps", 
+      "LangChain", 
+      "LangGraph"
+    ],
+    "growth_targets": [
+      "dbt", 
+      "Airflow", 
+      "cloud warehouses", 
+      "production ML", 
+      "Spark"
+    ]
+  },
+  "location": {
+    "base": "London, ON",
+    "corridor": [
+      "london", 
+      "kitchener", 
+      "waterloo", 
+      "cambridge", 
+      "hamilton", 
+      "woodstock", 
+      "brantford", 
+      "guelph", 
+      "chatham", 
+      "st. thomas", 
+      "stratford", 
+      "ingersoll", 
+      "paris", 
+      "burlington"
+    ],
+    "gta": [
+      "toronto", 
+      "oakville", 
+      "mississauga", 
+      "vaughan", 
+      "richmond hill", 
+      "markham", 
+      "scarborough", 
+      "brampton", 
+      "etobicoke", 
+      "north york" 
+      ],
+    "outer_gta": [
+      "pickering", 
+      "ajax", 
+      "whitby", 
+      "oshawa", 
+      "newmarket", 
+      "aurora", 
+      "milton", 
+      "barrie"
+    ],
+    "longterm": "Vancouver",
+    "scores": {
+      "corridor": 9,
+      "gta": 8,
+      "outer_gta": 7,
+      "remote_canada": 8,
+      "longterm": 6,
+      "canada_other": 4,
+      "unknown": 5,
+      "outside_canada": 1
+    }
+  },
+  "seniority": {
+    "hard_disqualifiers": [
+      "senior", 
+      "sr.", 
+      "sr ", 
+      "lead", 
+      "principal", 
+      "staff", 
+      "manager", 
+      "director", 
+      "head of", 
+      "chief"
+    ],
+    "junior_signals": [
+      "junior", 
+      "jr.", 
+      "jr ", 
+      "entry", 
+      "associate", 
+      "intern", 
+      "new grad", 
+      "graduate"
+    ],
+    "experience_threshold_years": 7
+  },
+  "scoring": {
+    "weights": {
+      "skill_match": 0.35,
+      "seniority_fit": 0.30,
+      "location_fit": 0.15,
+      "growth_signal": 0.15,
+      "comp_fit": 0.05
+    },
+    "gates": {
+      "senior_role_max_score": 2,
+      "senior_role_seniority_fit": 1
+    },
+    "display_threshold": 7
+  }
+}

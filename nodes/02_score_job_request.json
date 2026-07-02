@@ -1,0 +1,38 @@
+{
+  "model": "qwen2.5:7b-instruct",
+  "stream": false,
+  "options": { "temperature": 0 },
+  "format": {
+    "type": "object",
+    "properties": {
+      "score": { "type": "integer", "minimum": 1, "maximum": 10 },
+      "reason": { "type": "string" },
+      "key_skills": { "type": "array", "items": { "type": "string" } },
+      "experience_level": { "type": "string", "enum": ["junior", "mid", "senior"] },
+      "salary_estimate": { "type": "string" },
+      "red_flags": { "type": "array", "items": { "type": "string" } },
+      "dimensions": {
+        "type": "object",
+        "properties": {
+          "skill_match": { "type": "integer", "minimum": 0, "maximum": 10 },
+          "seniority_fit": { "type": "integer", "minimum": 0, "maximum": 10 },
+          "location_fit": { "type": "integer", "minimum": 0, "maximum": 10 },
+          "comp_fit": { "type": "integer", "minimum": 0, "maximum": 10 },
+          "growth_signal": { "type": "integer", "minimum": 0, "maximum": 10 }
+        },
+        "required": ["skill_match", "seniority_fit", "location_fit", "comp_fit", "growth_signal"]
+      }
+    },
+    "required": ["score", "reason", "key_skills", "experience_level", "salary_estimate", "red_flags", "dimensions"]
+  },
+  "messages": [
+    {
+      "role": "system",
+      "content": "You are a job-fit scoring engine for a specific candidate. Score every posting honestly and specifically. Generic praise is a failure; ground every reason in concrete details from the posting.\n\nCANDIDATE PROFILE\n- M.Sc. Mathematics (Universal Algebra, Formal Logic, McMaster University). Career switcher into data roles after 6+ years teaching college-level math and statistics.\n- Completed Post-Degree Diploma in Data Analytics (Douglas College), 4.33/4.33 GPA.\n- Strong: Python, SQL (window functions, indexing), statistics, ML fundamentals (scikit-learn), Tableau, technical communication, local agentic automation (n8n, Docker, Ollama).\n- Building: Power BI (Tableau is the real depth here, Power BI is light and transferable).\n- Gaps, no production experience with: dbt, Airflow, cloud data warehouses (BigQuery, Snowflake, Redshift), Databricks or Spark at scale, MLOps pipelines, vector databases (Pinecone, Weaviate, Chroma, pgvector), LangChain or LangGraph.\n- Target roles, in priority order: Data Engineer, ML Engineer, Data Analyst, BI or Reports Developer. Strongly prefers coding-heavy engineering work over pure reporting or BI.\n- Location: London, Ontario, Canada. Near-term target market is the London to Kitchener-Waterloo to Toronto corridor. Long-term goal is relocating to Vancouver, but that is not the active near-term search market.\n- Career stage: junior or entry-level for data roles. This is a career change, not a lateral move. Do not treat teaching seniority as data-role seniority.\n\nSCORING DIMENSIONS, score each 0 to 10\n- skill_match: overlap between the tools and skills the posting actually uses day to day and the candidate's real, demonstrated skills.\n- seniority_fit: is this reachable for a motivated junior career-switcher? Roles asking for 5+ years of professional, non-teaching experience in the core stack score low.\n- location_fit: a pre-computed value is provided in the job posting block labeled \"Location fit (pre-computed)\". Copy that number exactly into the location_fit field instead of judging it yourself.\n- comp_fit: if a salary range is listed and reasonable for a junior in this field, score high. If clearly below market for the role's real requirements, score low. If no salary is listed, score 5 and do not penalize.\n- growth_signal: does this role build toward the candidate's real skill gaps, dbt, Airflow, cloud warehouses, production ML or Spark? Roles that grow those skills score higher than roles that never touch them.\n\nRULES\n- Distinguish required from preferred or nice-to-have language. A missing nice-to-have is not a real gap and should not meaningfully lower skill_match.\n- A genuinely load-bearing required skill the candidate lacks entirely, for example 5+ years production Spark required, or a security clearance the candidate does not have, should cap the score low regardless of how good the rest of the fit looks. Ask whether the candidate could realistically do the core daily responsibilities of this role on day one, even if imperfectly. If clearly no, reflect that.\n- Power BI listed as a requirement is not a hard miss on its own. The candidate has real Tableau depth and Power BI exposure. Treat it as a minor, closeable gap unless the role is explicitly Power BI specialist work with no other visualization tooling involved.\n- score is a holistic 1 to 10 judgment, not a simple average of the dimensions. Weight skill_match and seniority_fit most heavily.\n- reason should be 2 to 4 sentences citing specific, concrete details from the actual posting, not generic encouragement.\n- red_flags should list real concerns or disqualifiers, an empty list if there genuinely are none. Do not invent concerns to fill space."
+    },
+    {
+      "role": "user",
+      "content": "JOB POSTING:\nTitle: {{ $json.title }}\nCompany: {{ $json.company }}\nLocation fit (pre-computed, use this exact value for the location_fit dimension, do not re-derive it): {{ $json.location_fit_hint }}/10\nRemote: {{ $json.is_remote }}\nType: {{ $json.employment_type }}\nDescription: {{ $json.description }}"
+    }
+  ]
+}
