@@ -22,7 +22,7 @@ The pipeline runs on a daily schedule inside a self-hosted n8n instance. All LLM
 reached from the container via `host.docker.internal`. The only outbound network calls are to the JSearch API, which offers
 200 requests per month in their free tier, and Gmail's SMTP server for delivery.
 
-![Pipeline Architecture](assets\job_search_pipeline_architecture.png)
+![Pipeline Architecture](/assets/job_search_pipeline_architecture.png)
 
 ### Pipeline Stages
 
