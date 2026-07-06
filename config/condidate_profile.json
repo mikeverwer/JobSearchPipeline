@@ -1,4 +1,11 @@
 {
+  "search": {
+    "query": "junior data Ontario",
+    "date_posted": "week",
+    "num_pages": 1,
+    "country": "ca",
+    "dedup_ttl_days": 30
+  },
   "candidate": {
     "name": "Mike Verwer",
     "career_stage": "junior",
@@ -131,5 +138,12 @@
       "senior_role_seniority_fit": 1
     },
     "display_threshold": 7
+  },
+  "models": {
+    "scoring": "qwen2.5:7b-instruct",
+    "scoring_temperature": 0.15,
+    "digest": "qwen2.5:7b-instruct",
+    "digest_temperature": 0.3,
+    "embedding": "nomic-embed-text"
   }
 }

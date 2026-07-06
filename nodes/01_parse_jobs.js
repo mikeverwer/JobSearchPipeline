@@ -1,11 +1,19 @@
+const config = $('Candidate Config').first().json;
 const jobs = $input.first().json.data.jobs;
 
 if (!jobs || jobs.length === 0) {
   return [{ json: { error: "No jobs found today", jobs: [] } }];
 }
 
+const corridor = config.location.corridor;
+const gta = config.location.gta;
+const outer_gta = config.location.outer_gta
+const locationScores = config.location.scores;
+const hardDisqualifiers = config.seniority.hard_disqualifiers;
+const juniorSignals = config.seniority.junior_signals;
+const expThreshold = config.seniority.experience_threshold_years;
+
 const parsed = jobs.map((job, index) => {
-  // Truncate description to ~500 words so Mistral handles it well
   let desc = (job.job_description || "No description available")
     .replace(/[\r\n\t]+/g, ' ')
     .replace(/"/g, "'")
@@ -16,40 +24,39 @@ const parsed = jobs.map((job, index) => {
   const words = desc.split(/\s+/);
   if (words.length > 1200) {
     desc = words.slice(0, 1200).join(" ") + "...";
-}
+  }
 
-  // Pre-compute location fit so the LLM doesn't have to judge geography itself
-  const corridor = ["london", "kitchener", "waterloo", "cambridge", "hamilton", "woodstock", "brantford", "guelph", "chatham", "st. thomas"];
-  const gta = [
-    "toronto", "oakville", "mississauga", "vaughan", "richmond hill",
-    "markham", "scarborough", "brampton", "milton"];
-  const outer_gta = [
-    "etobicoke",    // shows up separately in some postings
-    "north york",   // same
-    "pickering",
-    "ajax",
-    "whitby",
-    "oshawa",       // Durham region;
-    "newmarket",
-    "aurora",
-    "barrie", 
-  ];
+  // Location fit — deterministic lookup from config
   const cityLower = (job.job_city || "").toLowerCase();
   const countryLower = (job.job_country || "").toLowerCase();
   const isCanada = countryLower === "ca" || countryLower === "canada";
   let locationFitHint;
-  if (corridor.includes(cityLower)) locationFitHint = 9;
-  else if (gta.includes(cityLower)) locationFitHint = 8;
-  else if (outer_gta.includes(cityLower)) locationFitHint = 7;
-  else if (job.job_is_remote && isCanada) locationFitHint = 8;
-  else if (cityLower === "vancouver") locationFitHint = 6;
-  else if (isCanada) locationFitHint = 4;
-  else if (!cityLower && !countryLower) locationFitHint = 5;
-  else locationFitHint = 1;
+  if (corridor.includes(cityLower)) locationFitHint = locationScores.corridor;
+  else if (gta.includes(cityLower)) locationFitHint = locationScores.gta;
+  else if (outer_gta.includes(cityLower)) locationFitHint = locationScores.outer_gta;
+  else if (job.job_is_remote && isCanada) locationFitHint = locationScores.remote_canada;
+  else if (cityLower === config.location.longterm.toLowerCase()) locationFitHint = locationScores.longterm;
+  else if (isCanada) locationFitHint = locationScores.canada_other;
+  else if (!cityLower && !countryLower) locationFitHint = locationScores.unknown;
+  else locationFitHint = locationScores.outside_canada;
+
+  // Seniority flag — deterministic lookup from config
+  const titleLower = (job.job_title || "").toLowerCase();
+  let seniorityFlag;
+  if (hardDisqualifiers.some(t => titleLower.includes(t))) seniorityFlag = "senior";
+  else if (juniorSignals.some(t => titleLower.includes(t))) seniorityFlag = "junior";
+  else seniorityFlag = "unknown";
+
+  // Override with description-level experience scan if title looked neutral
+  const yearsMatch = desc.match(/(\d{1,2})\+?\s*(?:years|yrs)/i);
+  if (yearsMatch && parseInt(yearsMatch[1]) >= expThreshold && seniorityFlag !== "senior") {
+    seniorityFlag = "senior";
+  }
 
   return {
     id: index + 1,
     title: job.job_title || "Unknown Title",
+    job_id: job.job_id || `fallback-${job.employer_name}-${job.job_title}`.replace(/\s+/g, '-').toLowerCase(),
     company: job.employer_name || "Unknown Company",
     location: job.job_city
       ? `${job.job_city}, ${job.job_state || ""} ${job.job_country || ""}`
@@ -62,8 +69,8 @@ const parsed = jobs.map((job, index) => {
     salary_min: job.job_min_salary || null,
     salary_max: job.job_max_salary || null,
     location_fit_hint: locationFitHint,
+    seniority_flag: seniorityFlag,
   };
 });
 
-// Return each job as a separate item for the loop
 return parsed.map(job => ({ json: job }));

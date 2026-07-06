@@ -28,19 +28,19 @@
           "parameters": [
             {
               "name": "query",
-              "value": "data engineer jobs in Ontario"
+              "value": "{{ $('Candidate Config').first().json.search.query }}"
             },
             {
               "name": "date_posted",
-              "value": "week"
+              "value": "{{ $('Candidate Config').first().json.search.date_posted }}"
             },
             {
               "name": "num_pages",
-              "value": "1"
+              "value": "{{ $('Candidate Config').first().json.search.num_pages }}"
             },
             {
               "name": "country",
-              "value": "ca"
+              "value": "{{ $('Candidate Config').first().json.search.country }}"
             }
           ]
         },
@@ -231,7 +231,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const profile = {\n  \"candidate\": {\n    \"name\": \"Mike Verwer\",\n    \"career_stage\": \"junior\",\n    \"target_roles\": [\n      \"Data Engineer\", \n      \"ML Engineer\", \n      \"Data Analyst\", \n      \"BI Developer\"\n    ],\n    \"strong_skills\": [\n      \"Python\", \n      \"SQL\", \n      \"statistics\", \n      \"scikit-learn\", \n      \"Tableau\", \n      \"n8n\", \n      \"Docker\", \n      \"Ollama\"\n    ],\n    \"building_skills\": [\n      \"Power BI\"\n    ],\n    \"skill_gaps\": [\n      \"dbt\", \n      \"Airflow\", \n      \"Spark\", \n      \"Databricks\", \n      \"BigQuery\", \n      \"Snowflake\", \n      \"Redshift\", \n      \"MLOps\", \n      \"LangChain\", \n      \"LangGraph\"\n    ],\n    \"growth_targets\": [\n      \"dbt\", \n      \"Airflow\", \n      \"cloud warehouses\", \n      \"production ML\", \n      \"Spark\"\n    ]\n  },\n  \"location\": {\n    \"base\": \"London, ON\",\n    \"corridor\": [\n      \"london\", \n      \"kitchener\", \n      \"waterloo\", \n      \"cambridge\", \n      \"hamilton\", \n      \"woodstock\", \n      \"brantford\", \n      \"guelph\", \n      \"chatham\", \n      \"st. thomas\", \n      \"stratford\", \n      \"ingersoll\", \n      \"paris\", \n      \"burlington\"\n    ],\n    \"gta\": [\n      \"toronto\", \n      \"oakville\", \n      \"mississauga\", \n      \"vaughan\", \n      \"richmond hill\", \n      \"markham\", \n      \"scarborough\", \n      \"brampton\", \n      \"etobicoke\", \n      \"north york\", \n      ],\n    \"outer_gta\": [\n      \"pickering\", \n      \"ajax\", \n      \"whitby\", \n      \"oshawa\", \n      \"newmarket\", \n      \"aurora\", \n      \"milton\", \n      \"barrie\"\n    ],\n    \"longterm\": \"Vancouver\",\n    \"scores\": {\n      \"corridor\": 9,\n      \"gta\": 8,\n      \"outer_gta\": 7,\n      \"remote_canada\": 8,\n      \"longterm\": 6,\n      \"canada_other\": 4,\n      \"unknown\": 5,\n      \"outside_canada\": 1\n    }\n  },\n  \"seniority\": {\n    \"hard_disqualifiers\": [\n      \"senior\", \n      \"sr.\", \n      \"sr \", \n      \"lead\", \n      \"principal\", \n      \"staff\", \n      \"manager\", \n      \"director\", \n      \"head of\", \n      \"chief\"\n    ],\n    \"junior_signals\": [\n      \"junior\", \n      \"jr.\", \n      \"jr \", \n      \"entry\", \n      \"associate\", \n      \"intern\", \n      \"new grad\", \n      \"graduate\"\n    ],\n    \"experience_threshold_years\": 7\n  },\n  \"scoring\": {\n    \"weights\": {\n      \"skill_match\": 0.35,\n      \"seniority_fit\": 0.30,\n      \"location_fit\": 0.15,\n      \"growth_signal\": 0.15,\n      \"comp_fit\": 0.05\n    },\n    \"gates\": {\n      \"senior_role_max_score\": 2,\n      \"senior_role_seniority_fit\": 1\n    },\n    \"display_threshold\": 7\n  },\n  \"models\": {\n    \"scoring\": \"qwen2.5:7b-instruct\",\n    \"scoring_temperature\": 0.15,\n    \"digest\": \"qwen2.5:7b-instruct\",\n    \"digest_temperature\": 0.3,\n    \"embedding\": \"nomic-embed-text\"\n  }\n};\n\nreturn [{ json: profile }];"
+        "jsCode": "const profile = {\n  \"search\": {\n    \"query\": \"junior data Ontario\",\n    \"date_posted\": \"week\",\n    \"num_pages\": 1,\n    \"country\": \"ca\",\n    \"dedup_ttl_days\": 30\n  },\n  \"candidate\": {\n    \"name\": \"Mike Verwer\",\n    \"career_stage\": \"junior\",\n    \"target_roles\": [\n      \"Data Engineer\", \n      \"ML Engineer\", \n      \"Data Analyst\", \n      \"BI Developer\"\n    ],\n    \"strong_skills\": [\n      \"Python\", \n      \"SQL\", \n      \"statistics\", \n      \"scikit-learn\", \n      \"Tableau\", \n      \"n8n\", \n      \"Docker\", \n      \"Ollama\"\n    ],\n    \"building_skills\": [\n      \"Power BI\"\n    ],\n    \"skill_gaps\": [\n      \"dbt\", \n      \"Airflow\", \n      \"Spark\", \n      \"Databricks\", \n      \"BigQuery\", \n      \"Snowflake\", \n      \"Redshift\", \n      \"MLOps\", \n      \"LangChain\", \n      \"LangGraph\"\n    ],\n    \"growth_targets\": [\n      \"dbt\", \n      \"Airflow\", \n      \"cloud warehouses\", \n      \"production ML\", \n      \"Spark\"\n    ]\n  },\n  \"location\": {\n    \"base\": \"London, ON\",\n    \"corridor\": [\n      \"london\", \n      \"kitchener\", \n      \"waterloo\", \n      \"cambridge\", \n      \"hamilton\", \n      \"woodstock\", \n      \"brantford\", \n      \"guelph\", \n      \"chatham\", \n      \"st. thomas\", \n      \"stratford\", \n      \"ingersoll\", \n      \"paris\", \n      \"burlington\"\n    ],\n    \"gta\": [\n      \"toronto\", \n      \"oakville\", \n      \"mississauga\", \n      \"vaughan\", \n      \"richmond hill\", \n      \"markham\", \n      \"scarborough\", \n      \"brampton\", \n      \"etobicoke\", \n      \"north york\", \n      ],\n    \"outer_gta\": [\n      \"pickering\", \n      \"ajax\", \n      \"whitby\", \n      \"oshawa\", \n      \"newmarket\", \n      \"aurora\", \n      \"milton\", \n      \"barrie\"\n    ],\n    \"longterm\": \"Vancouver\",\n    \"scores\": {\n      \"corridor\": 9,\n      \"gta\": 8,\n      \"outer_gta\": 7,\n      \"remote_canada\": 8,\n      \"longterm\": 6,\n      \"canada_other\": 4,\n      \"unknown\": 5,\n      \"outside_canada\": 1\n    }\n  },\n  \"seniority\": {\n    \"hard_disqualifiers\": [\n      \"senior\", \n      \"sr.\", \n      \"sr \", \n      \"lead\", \n      \"principal\", \n      \"staff\", \n      \"manager\", \n      \"director\", \n      \"head of\", \n      \"chief\"\n    ],\n    \"junior_signals\": [\n      \"junior\", \n      \"jr.\", \n      \"jr \", \n      \"entry\", \n      \"associate\", \n      \"intern\", \n      \"new grad\", \n      \"graduate\"\n    ],\n    \"experience_threshold_years\": 7\n  },\n  \"scoring\": {\n    \"weights\": {\n      \"skill_match\": 0.35,\n      \"seniority_fit\": 0.30,\n      \"location_fit\": 0.15,\n      \"growth_signal\": 0.15,\n      \"comp_fit\": 0.05\n    },\n    \"gates\": {\n      \"senior_role_max_score\": 2,\n      \"senior_role_seniority_fit\": 1\n    },\n    \"display_threshold\": 7\n  },\n  \"models\": {\n    \"scoring\": \"qwen2.5:7b-instruct\",\n    \"scoring_temperature\": 0.15,\n    \"digest\": \"qwen2.5:7b-instruct\",\n    \"digest_temperature\": 0.3,\n    \"embedding\": \"nomic-embed-text\"\n  }\n};\n\nreturn [{ json: profile }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -244,7 +244,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days, matches date_posted=week window\nconst now = Date.now();\n\n// Initialize store on first run\nif (!staticData.seenJobIds) {\n  staticData.seenJobIds = {};\n}\n\nconst seenIds = staticData.seenJobIds;\nconst allJobs = $input.all().map(item => item.json);\n\n// Filter to only unseen jobs\nconst newJobs = allJobs.filter(job => !seenIds[job.job_id]);\n\n// Mark new jobs as seen\nfor (const job of newJobs) {\n  seenIds[job.job_id] = now;\n}\n\n// Prune entries older than TTL so the store doesn't grow indefinitely\nfor (const [id, timestamp] of Object.entries(seenIds)) {\n  if (now - timestamp > TTL_MS) {\n    delete seenIds[id];\n  }\n}\n\n// Persist back — required for Static Data to actually save\nstaticData.seenJobIds = seenIds;\n\nconst totalSeen = Object.keys(seenIds).length;\n\nif (newJobs.length === 0) {\n  // Return a single item signalling nothing new — Format Email handles this gracefully\n  return [{ json: { \n    no_new_jobs: true, \n    message: `No new postings today. ${totalSeen} jobs tracked in seen store.` \n  }}];\n}\n\n// Attach dedup metadata for transparency\nreturn newJobs.map(job => ({ \n  json: { \n    ...job, \n    dedup_new: true,\n    dedup_store_size: totalSeen\n  } \n}));"
+        "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst config = $('Candidate Config').first().json;\nconst TTL_MS = config.search.dedup_ttl_days * 24 * 60 * 60 * 1000;\nconst now = Date.now();\n\n// Initialize store on first run\nif (!staticData.seenJobIds) {\n  staticData.seenJobIds = {};\n}\n\nconst seenIds = staticData.seenJobIds;\nconst allJobs = $input.all().map(item => item.json);\n\n// Filter to only unseen jobs\nconst newJobs = allJobs.filter(job => !seenIds[job.job_id]);\n\n// Mark new jobs as seen\nfor (const job of newJobs) {\n  seenIds[job.job_id] = now;\n}\n\n// Prune entries older than TTL so the store doesn't grow indefinitely\nfor (const [id, timestamp] of Object.entries(seenIds)) {\n  if (now - timestamp > TTL_MS) {\n    delete seenIds[id];\n  }\n}\n\n// Persist back — required for Static Data to actually save\nstaticData.seenJobIds = seenIds;\n\nconst totalSeen = Object.keys(seenIds).length;\n\nif (newJobs.length === 0) {\n  // Return a single item signalling nothing new — Format Email handles this gracefully\n  return [{ json: { \n    no_new_jobs: true, \n    message: `No new postings today. ${totalSeen} jobs tracked in seen store.` \n  }}];\n}\n\n// Attach dedup metadata for transparency\nreturn newJobs.map(job => ({ \n  json: { \n    ...job, \n    dedup_new: true,\n    dedup_store_size: totalSeen\n  } \n}));"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -284,7 +284,7 @@
       "main": [
         [
           {
-            "node": "Dedupulicate",
+            "node": "Deduplicate",
             "type": "main",
             "index": 0
           }
@@ -397,7 +397,7 @@
         ]
       ]
     },
-    "Dedupulicate": {
+    "Deduplicate": {
       "main": [
         [
           {
@@ -415,7 +415,7 @@
     "binaryMode": "separate",
     "availableInMCP": false
   },
-  "versionId": "323ea9df-d8a3-4e7d-b556-a1abb924e213",
+  "versionId": "3a1805d5-e592-4cb8-afa0-e38d9bf2ddd3",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "9cd24e2acb13b7ecbb725fe24b5512cab2bfffcf1142c2d4e23d12645c6ff04c"
