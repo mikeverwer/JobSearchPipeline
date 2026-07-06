@@ -1,0 +1,426 @@
+{
+  "name": "job-agent-dev",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 8
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -208,
+        0
+      ],
+      "id": "8d4861f8-db9d-4e29-98b2-022774c71363",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "url": "https://jsearch.p.rapidapi.com/search-v2",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "query",
+              "value": "{{ $('Candidate Config').first().json.search.query }}"
+            },
+            {
+              "name": "date_posted",
+              "value": "{{ $('Candidate Config').first().json.search.date_posted }}"
+            },
+            {
+              "name": "num_pages",
+              "value": "{{ $('Candidate Config').first().json.search.num_pages }}"
+            },
+            {
+              "name": "country",
+              "value": "{{ $('Candidate Config').first().json.search.country }}"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-RapidAPI-Key",
+              "value": "46ed88c9edmshd4791b46b1ea386p16fe96jsn6d7ffebc9e44"
+            },
+            {
+              "name": "X-RapidAPI-Host",
+              "value": "jsearch.p.rapidapi.com"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        112,
+        0
+      ],
+      "id": "60709a92-fe05-4ea0-968e-f09170672f8d",
+      "name": "Fetch Jobs - JSearch"
+    },
+    {
+      "parameters": {
+        "jsCode": "const config = $('Candidate Config').first().json;\nconst jobs = $input.first().json.data.jobs;\n\nif (!jobs || jobs.length === 0) {\n  return [{ json: { error: \"No jobs found today\", jobs: [] } }];\n}\n\nconst corridor = config.location.corridor;\nconst gta = config.location.gta;\nconst outer_gta = config.location.outer_gta\nconst locationScores = config.location.scores;\nconst hardDisqualifiers = config.seniority.hard_disqualifiers;\nconst juniorSignals = config.seniority.junior_signals;\nconst expThreshold = config.seniority.experience_threshold_years;\n\nconst parsed = jobs.map((job, index) => {\n  let desc = (job.job_description || \"No description available\")\n    .replace(/[\\r\\n\\t]+/g, ' ')\n    .replace(/\"/g, \"'\")\n    .replace(/\\\\/g, '')\n    .replace(/[\\x00-\\x1F\\x7F]/g, '')\n    .replace(/\\s+/g, ' ')\n    .trim();\n  const words = desc.split(/\\s+/);\n  if (words.length > 1200) {\n    desc = words.slice(0, 1200).join(\" \") + \"...\";\n  }\n\n  // Location fit — deterministic lookup from config\n  const cityLower = (job.job_city || \"\").toLowerCase();\n  const countryLower = (job.job_country || \"\").toLowerCase();\n  const isCanada = countryLower === \"ca\" || countryLower === \"canada\";\n  let locationFitHint;\n  if (corridor.includes(cityLower)) locationFitHint = locationScores.corridor;\n  else if (gta.includes(cityLower)) locationFitHint = locationScores.gta;\n    else if (outer_gta.includes(cityLower)) locationFitHint = locationScores.outer_gta;\n  else if (job.job_is_remote && isCanada) locationFitHint = locationScores.remote_canada;\n  else if (cityLower === config.location.longterm.toLowerCase()) locationFitHint = locationScores.longterm;\n  else if (isCanada) locationFitHint = locationScores.canada_other;\n  else if (!cityLower && !countryLower) locationFitHint = locationScores.unknown;\n  else locationFitHint = locationScores.outside_canada;\n\n  // Seniority flag — deterministic lookup from config\n  const titleLower = (job.job_title || \"\").toLowerCase();\n  let seniorityFlag;\n  if (hardDisqualifiers.some(t => titleLower.includes(t))) seniorityFlag = \"senior\";\n  else if (juniorSignals.some(t => titleLower.includes(t))) seniorityFlag = \"junior\";\n  else seniorityFlag = \"unknown\";\n\n  // Override with description-level experience scan if title looked neutral\n  const yearsMatch = desc.match(/(\\d{1,2})\\+?\\s*(?:years|yrs)/i);\n  if (yearsMatch && parseInt(yearsMatch[1]) >= expThreshold && seniorityFlag !== \"senior\") {\n    seniorityFlag = \"senior\";\n  }\n\n  return {\n    id: index + 1,\n    title: job.job_title || \"Unknown Title\",\n    job_id: job.job_id || `fallback-${job.employer_name}-${job.job_title}`.replace(/\\s+/g, '-').toLowerCase(),\n    company: job.employer_name || \"Unknown Company\",\n    location: job.job_city\n      ? `${job.job_city}, ${job.job_state || \"\"} ${job.job_country || \"\"}`\n      : (job.job_is_remote ? \"Remote\" : \"Not specified\"),\n    is_remote: job.job_is_remote || false,\n    employment_type: job.job_employment_type || \"Not specified\",\n    description: desc,\n    apply_link: job.job_apply_link || \"#\",\n    posted: job.job_posted_at_datetime_utc || \"Unknown\",\n    salary_min: job.job_min_salary || null,\n    salary_max: job.job_max_salary || null,\n    location_fit_hint: locationFitHint,\n    seniority_flag: seniorityFlag,\n  };\n});\n\nreturn parsed.map(job => ({ json: job }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        272,
+        0
+      ],
+      "id": "b8d320b0-7a33-46da-a836-17638fac829a",
+      "name": "Parse Jobs"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        624,
+        0
+      ],
+      "id": "0cc465fc-b1ee-401d-bb04-68626b615a9e",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "jsCode": "const config = $('Candidate Config').first().json;\nconst weights = config.scoring.weights;\nconst gates = config.scoring.gates;\n\nconst rawContent = $input.first().json.message.content;\nconst originalJob = $('Loop Over Items').first().json;\n\nlet scored;\ntry {\n  scored = JSON.parse(rawContent);\n} catch (e) {\n  scored = {\n    score: 5,\n    reason: \"Could not parse LLM response. Manual review recommended.\",\n    key_skills: [],\n    experience_level: \"unknown\",\n    salary_estimate: \"N/A\",\n    red_flags: [\"LLM parsing failed\"],\n    dimensions: null\n  };\n}\n\n// Always override location_fit with the pre-computed value\nscored.dimensions = scored.dimensions || {};\nscored.dimensions.location_fit = originalJob.location_fit_hint;\n\n// Apply seniority gate — deterministic, not LLM's call\nlet gated = false;\nlet gateReason = null;\nif (originalJob.seniority_flag === \"senior\") {\n  scored.dimensions.seniority_fit = gates.senior_role_seniority_fit;\n  scored.experience_level = \"senior\"; // override LLM's independent assessment\n  gated = true;\n  gateReason = \"Senior or lead role — outside target seniority\";\n  if (!scored.red_flags.some(f => f.toLowerCase().includes(\"senior\"))) {\n    scored.red_flags.unshift(gateReason);\n  }\n}\n\n// Compute weighted score from dimensions\nconst dims = scored.dimensions;\nlet weightedScore = Math.round(\n  (dims.skill_match   || 0) * weights.skill_match +\n  (dims.seniority_fit || 0) * weights.seniority_fit +\n  (dims.location_fit  || 0) * weights.location_fit +\n  (dims.growth_signal || 0) * weights.growth_signal +\n  (dims.comp_fit      || 0) * weights.comp_fit\n);\n\n// Apply gate ceiling after weighting\nif (gated) {\n  weightedScore = Math.min(weightedScore, gates.senior_role_max_score);\n}\n\nreturn [{\n  json: {\n    title: originalJob.title,\n    company: originalJob.company,\n    location: originalJob.location,\n    is_remote: originalJob.is_remote,\n    employment_type: originalJob.employment_type,\n    apply_link: originalJob.apply_link,\n    posted: originalJob.posted,\n    salary_min: originalJob.salary_min,\n    salary_max: originalJob.salary_max,\n    llm_score: scored.score,        // raw LLM holistic score, kept for comparison\n    match_score: weightedScore,     // weighted deterministic score, drives sorting/display\n    match_reason: scored.reason,\n    key_skills: scored.key_skills,\n    experience_level: scored.experience_level,\n    salary_estimate: scored.salary_estimate,\n    red_flags: scored.red_flags,\n    dimensions: dims,\n    gated: gated,\n    gate_reason: gateReason,\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1152,
+        192
+      ],
+      "id": "f43f5aec-9c1e-41df-8d88-5ecede82af55",
+      "name": "Parse Score"
+    },
+    {
+      "parameters": {
+        "sortFieldsUi": {
+          "sortField": [
+            {
+              "fieldName": "match_score",
+              "order": "descending"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.sort",
+      "typeVersion": 1,
+      "position": [
+        832,
+        -208
+      ],
+      "id": "61a4ab39-b066-42b6-b500-26a2bc4f42b3",
+      "name": "Sort"
+    },
+    {
+      "parameters": {
+        "jsCode": "const config = $('Candidate Config').first().json;\nconst allJobs = $input.all().map(item => item.json);\n\nconst jobSummaries = allJobs.map(job =>\n  `- [Score: ${job.match_score}/10] ${job.title} at ${job.company} (${job.location})\n  Reason: ${job.match_reason}\n  Skills needed: ${(job.key_skills || []).join(\", \")}\n  Red flags: ${(job.red_flags || []).length > 0 ? job.red_flags.join(\", \") : \"None\"}`\n).join(\"\\n\\n\");\n\nconst requestBody = {\n  model: config.models.digest,\n  stream: false,\n  options: { temperature: config.models.digest_temperature },\n  messages: [\n    {\n      role: \"system\",\n      content: \"You are a career assistant agent helping a specific candidate track the job market. Write clearly and directly. Be specific and actionable. Do not pad responses.\"\n    },\n    {\n      role: \"user\",\n      content: `Below are today's job postings, already scored by relevance to the candidate.\n\nWrite a concise daily market summary with these three sections:\n1. HEADLINE — one sentence on today's overall market (how many jobs, general quality)\n2. TRENDS — patterns across postings (common tools required, seniority mix, remote vs on-site)\n3. ACTION ITEMS — two or three specific things the candidate should do today\n\nDo not list, name, or describe individual job postings. A separate ranked table is already included in the email below your summary.\n\nTODAY'S SCORED JOBS:\n${jobSummaries}`\n    }\n  ]\n};\n\nreturn [{ json: { requestBody: JSON.stringify(requestBody), jobs: allJobs } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        992,
+        -208
+      ],
+      "id": "86f974be-0347-44db-aa43-cd13ea8e46f2",
+      "name": "Prepare Digest Prompt"
+    },
+    {
+      "parameters": {
+        "jsCode": "const config = $('Candidate Config').first().json;\nconst threshold = config.scoring.display_threshold;\n\nconst digest = $input.first().json.message.content;\nconst jobs = $('Prepare Digest Prompt').first().json.jobs;\n\n// If dedup filtered everything, send a short no-new-jobs notice\nif (!jobs || jobs.length === 0 || jobs[0]?.no_new_jobs) {\n  const today = new Date().toLocaleDateString('en-CA', {\n    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'\n  });\n  return [{\n    json: {\n      subject: `Job Digest — ${today} — No new postings`,\n      html: `<div style=\"font-family:Arial,sans-serif;max-width:600px;margin:0 auto;\">\n        <h2 style=\"color:#1a1a1a;\">No New Postings Today</h2>\n        <p style=\"color:#666;\">All jobs from today's search have already been seen and scored. \n        Check back tomorrow.</p>\n      </div>`\n    }\n  }];\n}\n\nconst today = new Date().toLocaleDateString('en-CA', {\n  weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'\n});\n\nconst rankedJobs = [...jobs].sort((a, b) => b.match_score - a.match_score);\nconst strongMatches = rankedJobs.filter(j => j.match_score >= threshold);\nconst topJobs = (strongMatches.length >= 3 ? strongMatches : rankedJobs.slice(0, 3))\n  .map(j => {\n    const gateLabel = j.gated\n      ? `<br/><span style=\"color:#cc0000;font-size:12px;\">⛔ ${j.gate_reason}</span>`\n      : \"\";\n    const dimBar = j.dimensions\n      ? `<br/><span style=\"font-size:11px;color:#888;\">\n          Skill: ${j.dimensions.skill_match}/10 &nbsp;|&nbsp;\n          Seniority: ${j.dimensions.seniority_fit}/10 &nbsp;|&nbsp;\n          Location: ${j.dimensions.location_fit}/10 &nbsp;|&nbsp;\n          Growth: ${j.dimensions.growth_signal}/10\n         </span>`\n      : \"\";\n    return `<tr>\n      <td style=\"padding:8px;border-bottom:1px solid #eee;\">\n        <strong>${j.title}</strong><br/>\n        ${j.company} — ${j.location}<br/>\n        <span style=\"color:#2d7d46;font-weight:bold;\">Score: ${j.match_score}/10</span>\n        ${gateLabel}\n        ${dimBar}<br/>\n        <em>${j.match_reason}</em><br/>\n        <a href=\"${j.apply_link}\" style=\"color:#1a73e8;\">Apply Now →</a>\n      </td>\n    </tr>`;\n  }).join(\"\");\n\nconst html = `\n  <div style=\"font-family:Arial,sans-serif;max-width:600px;margin:0 auto;\">\n    <h1 style=\"color:#1a1a1a;border-bottom:2px solid #1a73e8;padding-bottom:10px;\">\n      Job Search Pipeline — Daily Digest\n    </h1>\n    <p style=\"color:#666;font-size:14px;\">${today} — ${jobs.length} jobs analyzed</p>\n\n    <div style=\"background:#f8f9fa;padding:16px;border-radius:8px;margin:16px 0;\">\n      ${digest.replace(/\\n/g, \"<br/>\")}\n    </div>\n\n    ${topJobs ? `\n    <h2 style=\"color:#1a1a1a;\">Top Matches</h2>\n    <table style=\"width:100%;border-collapse:collapse;\">${topJobs}</table>\n    ` : \"<p>No postings met the display threshold today.</p>\"}\n\n    <hr style=\"margin:24px 0;border:none;border-top:1px solid #eee;\"/>\n    <p style=\"color:#999;font-size:12px;\">\n      Powered by Qwen 2.5 7B (Ollama) + n8n &nbsp;|&nbsp;\n      Weighted scoring: Skill ${config.scoring.weights.skill_match * 100}% /\n      Seniority ${config.scoring.weights.seniority_fit * 100}% /\n      Location ${config.scoring.weights.location_fit * 100}% /\n      Growth ${config.scoring.weights.growth_signal * 100}% /\n      Comp ${config.scoring.weights.comp_fit * 100}%\n    </p>\n  </div>`;\n\nreturn [{\n  json: {\n    subject: `Job Digest — ${today} — ${jobs.length} jobs, ${strongMatches.length} above threshold`,\n    html: html\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        992,
+        0
+      ],
+      "id": "6d3d1d22-eba6-405f-8483-4b619dd7125d",
+      "name": "Format Email"
+    },
+    {
+      "parameters": {
+        "fromEmail": "mike.verwer@gmail.com",
+        "toEmail": "mike.verwer@gmail.com",
+        "subject": "={{ $json.subject }}",
+        "html": "={{ $json.html }} }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1152,
+        0
+      ],
+      "id": "d7cb133b-2e96-4146-b9db-7640fc91de26",
+      "name": "Send an Email",
+      "webhookId": "73eeb10e-a32c-4b21-bd7c-2962d70ace1d",
+      "credentials": {
+        "smtp": {
+          "id": "EhxJQJttrnCHoYJW",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:11434/api/chat",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.requestBody }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        992,
+        192
+      ],
+      "id": "cc16fda5-2057-4b1b-bd13-e64616fa9a06",
+      "name": "Score Job"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:11434/api/chat",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.requestBody }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        832,
+        0
+      ],
+      "id": "6953b9d6-6c47-4c54-9715-61cffe184c05",
+      "name": "Generate Digest"
+    },
+    {
+      "parameters": {
+        "jsCode": "const config = $('Candidate Config').first().json;\nconst job = $input.first().json;\nconst candidate = config.candidate;\n\nconst systemPrompt = `You are a job-fit scoring engine for a specific candidate. Score every posting honestly and specifically. Generic praise is a failure; ground every reason in concrete details from the posting.\n\nCANDIDATE PROFILE\n- M.Sc. Mathematics (Universal Algebra, Formal Logic, McMaster University). Career switcher into data roles after 6+ years teaching college-level math and statistics.\n- Completed Post-Degree Diploma in Data Analytics (Douglas College), 4.33/4.33 GPA.\n- Strong skills: ${candidate.strong_skills.join(\", \")}.\n- Building: ${candidate.building_skills.join(\", \")}.\n- Gaps, no production experience with: ${candidate.skill_gaps.join(\", \")}.\n- Target roles in priority order: ${candidate.target_roles.join(\", \")}. Strongly prefers coding-heavy engineering work over pure reporting or BI.\n- Location: ${config.location.base}. Near-term target market is the London to Kitchener-Waterloo to Toronto corridor. Long-term goal is relocating to ${config.location.longterm}, but that is not the active near-term search market.\n- Career stage: ${candidate.career_stage}. This is a career change, not a lateral move. Do not treat teaching seniority as data-role seniority.\n\nSCORING DIMENSIONS, score each 0 to 10\n- skill_match: overlap between the tools and skills the posting actually uses day to day and the candidate's real, demonstrated skills.\n- seniority_fit: is this reachable for a motivated junior career-switcher with no prior professional data role experience? Any role with \"Senior\", \"Lead\", \"Principal\", \"Staff\", or \"Manager\" in the title scores 1. Roles requiring 5+ years of non-teaching professional experience in the core stack score 2-3. Genuinely junior or entry-level roles score 8-10.\n- location_fit: a pre-computed value is provided in the job posting block. Copy that number exactly into the location_fit field instead of judging it yourself.\n- comp_fit: if a salary range is listed and reasonable for a junior in this field, score high. If clearly below market for the role's real requirements, score low. If no salary is listed, score 5 and do not penalize.\n- growth_signal: does this role build toward the candidate's real skill gaps: ${candidate.growth_targets.join(\", \")}? Roles that grow those skills score higher.\n\nRULES\n- Distinguish required from preferred or nice-to-have language. A missing nice-to-have is not a real gap and should not meaningfully lower skill_match.\n- A genuinely load-bearing required skill the candidate lacks entirely should cap the score low. Ask whether the candidate could realistically do the core daily responsibilities on day one, even if imperfectly. If clearly no, reflect that.\n- Power BI listed as a requirement is not a hard miss. The candidate has real Tableau depth and Power BI exposure. Treat it as a minor, closeable gap unless the role is explicitly Power BI specialist work with no other visualization tooling.\n- score is a holistic 1 to 10 judgment, not a simple average. Weight skill_match and seniority_fit most heavily.\n- reason should be 2 to 4 sentences citing specific, concrete details from the actual posting, not generic encouragement.\n- red_flags should list real concerns or disqualifiers, empty array if genuinely none. Do not invent concerns to fill space.\n- Do not assess seniority or experience level yourself. Do not use the words \"junior\" or \"senior\" in the reason field. Seniority is handled externally. Focus reason entirely on skill match and growth signal.`;\n\nconst requestBody = {\n  model: config.models.scoring,\n  stream: false,\n  options: { temperature: config.models.scoring_temperature },\n  format: {\n    type: \"object\",\n    properties: {\n      score: { type: \"integer\", minimum: 1, maximum: 10 },\n      reason: { type: \"string\" },\n      key_skills: { type: \"array\", items: { type: \"string\" } },\n      experience_level: { type: \"string\", enum: [\"junior\", \"mid\", \"senior\"] },\n      salary_estimate: { type: \"string\" },\n      red_flags: { type: \"array\", items: { type: \"string\" } },\n      dimensions: {\n        type: \"object\",\n        properties: {\n          skill_match:   { type: \"integer\", minimum: 0, maximum: 10 },\n          seniority_fit: { type: \"integer\", minimum: 0, maximum: 10 },\n          location_fit:  { type: \"integer\", minimum: 0, maximum: 10 },\n          comp_fit:      { type: \"integer\", minimum: 0, maximum: 10 },\n          growth_signal: { type: \"integer\", minimum: 0, maximum: 10 }\n        },\n        required: [\"skill_match\", \"seniority_fit\", \"location_fit\", \"comp_fit\", \"growth_signal\"]\n      }\n    },\n    required: [\"score\", \"reason\", \"key_skills\", \"experience_level\", \"salary_estimate\", \"red_flags\", \"dimensions\"]\n  },\n  messages: [\n    {\n      role: \"system\",\n      content: systemPrompt\n    },\n    {\n      role: \"user\",\n      content: `JOB POSTING:\\nTitle: ${job.title}\\nCompany: ${job.company}\\nLocation fit (pre-computed, use this exact value for the location_fit dimension, do not re-derive it): ${job.location_fit_hint}/10\\nRemote: ${job.is_remote}\\nType: ${job.employment_type}\\nDescription: ${job.description}`\n    }\n  ]\n};\n\nreturn [{ json: { requestBody: JSON.stringify(requestBody), job: job } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        832,
+        192
+      ],
+      "id": "a4eedac1-fddd-46af-82c0-2d941b4f8f4d",
+      "name": "Prepare Score Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "const profile = {\n  \"search\": {\n    \"query\": \"junior data Ontario\",\n    \"date_posted\": \"week\",\n    \"num_pages\": 1,\n    \"country\": \"ca\",\n    \"dedup_ttl_days\": 30\n  },\n  \"candidate\": {\n    \"name\": \"Mike Verwer\",\n    \"career_stage\": \"junior\",\n    \"target_roles\": [\n      \"Data Engineer\", \n      \"ML Engineer\", \n      \"Data Analyst\", \n      \"BI Developer\"\n    ],\n    \"strong_skills\": [\n      \"Python\", \n      \"SQL\", \n      \"statistics\", \n      \"scikit-learn\", \n      \"Tableau\", \n      \"n8n\", \n      \"Docker\", \n      \"Ollama\"\n    ],\n    \"building_skills\": [\n      \"Power BI\"\n    ],\n    \"skill_gaps\": [\n      \"dbt\", \n      \"Airflow\", \n      \"Spark\", \n      \"Databricks\", \n      \"BigQuery\", \n      \"Snowflake\", \n      \"Redshift\", \n      \"MLOps\", \n      \"LangChain\", \n      \"LangGraph\"\n    ],\n    \"growth_targets\": [\n      \"dbt\", \n      \"Airflow\", \n      \"cloud warehouses\", \n      \"production ML\", \n      \"Spark\"\n    ]\n  },\n  \"location\": {\n    \"base\": \"London, ON\",\n    \"corridor\": [\n      \"london\", \n      \"kitchener\", \n      \"waterloo\", \n      \"cambridge\", \n      \"hamilton\", \n      \"woodstock\", \n      \"brantford\", \n      \"guelph\", \n      \"chatham\", \n      \"st. thomas\", \n      \"stratford\", \n      \"ingersoll\", \n      \"paris\", \n      \"burlington\"\n    ],\n    \"gta\": [\n      \"toronto\", \n      \"oakville\", \n      \"mississauga\", \n      \"vaughan\", \n      \"richmond hill\", \n      \"markham\", \n      \"scarborough\", \n      \"brampton\", \n      \"etobicoke\", \n      \"north york\", \n      ],\n    \"outer_gta\": [\n      \"pickering\", \n      \"ajax\", \n      \"whitby\", \n      \"oshawa\", \n      \"newmarket\", \n      \"aurora\", \n      \"milton\", \n      \"barrie\"\n    ],\n    \"longterm\": \"Vancouver\",\n    \"scores\": {\n      \"corridor\": 9,\n      \"gta\": 8,\n      \"outer_gta\": 7,\n      \"remote_canada\": 8,\n      \"longterm\": 6,\n      \"canada_other\": 4,\n      \"unknown\": 5,\n      \"outside_canada\": 1\n    }\n  },\n  \"seniority\": {\n    \"hard_disqualifiers\": [\n      \"senior\", \n      \"sr.\", \n      \"sr \", \n      \"lead\", \n      \"principal\", \n      \"staff\", \n      \"manager\", \n      \"director\", \n      \"head of\", \n      \"chief\"\n    ],\n    \"junior_signals\": [\n      \"junior\", \n      \"jr.\", \n      \"jr \", \n      \"entry\", \n      \"associate\", \n      \"intern\", \n      \"new grad\", \n      \"graduate\"\n    ],\n    \"experience_threshold_years\": 7\n  },\n  \"scoring\": {\n    \"weights\": {\n      \"skill_match\": 0.35,\n      \"seniority_fit\": 0.30,\n      \"location_fit\": 0.15,\n      \"growth_signal\": 0.15,\n      \"comp_fit\": 0.05\n    },\n    \"gates\": {\n      \"senior_role_max_score\": 2,\n      \"senior_role_seniority_fit\": 1\n    },\n    \"display_threshold\": 7\n  },\n  \"models\": {\n    \"scoring\": \"qwen2.5:7b-instruct\",\n    \"scoring_temperature\": 0.15,\n    \"digest\": \"qwen2.5:7b-instruct\",\n    \"digest_temperature\": 0.3,\n    \"embedding\": \"nomic-embed-text\"\n  }\n};\n\nreturn [{ json: profile }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -48,
+        0
+      ],
+      "id": "85adaed3-1967-4ac5-bcd2-45bca2ffd92b",
+      "name": "Candidate Config"
+    },
+    {
+      "parameters": {
+        "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst config = $('Candidate Config').first().json;\nconst TTL_MS = config.search.dedup_ttl_days * 24 * 60 * 60 * 1000;\nconst now = Date.now();\n\n// Initialize store on first run\nif (!staticData.seenJobIds) {\n  staticData.seenJobIds = {};\n}\n\nconst seenIds = staticData.seenJobIds;\nconst allJobs = $input.all().map(item => item.json);\n\n// Filter to only unseen jobs\nconst newJobs = allJobs.filter(job => !seenIds[job.job_id]);\n\n// Mark new jobs as seen\nfor (const job of newJobs) {\n  seenIds[job.job_id] = now;\n}\n\n// Prune entries older than TTL so the store doesn't grow indefinitely\nfor (const [id, timestamp] of Object.entries(seenIds)) {\n  if (now - timestamp > TTL_MS) {\n    delete seenIds[id];\n  }\n}\n\n// Persist back — required for Static Data to actually save\nstaticData.seenJobIds = seenIds;\n\nconst totalSeen = Object.keys(seenIds).length;\n\nif (newJobs.length === 0) {\n  // Return a single item signalling nothing new — Format Email handles this gracefully\n  return [{ json: { \n    no_new_jobs: true, \n    message: `No new postings today. ${totalSeen} jobs tracked in seen store.` \n  }}];\n}\n\n// Attach dedup metadata for transparency\nreturn newJobs.map(job => ({ \n  json: { \n    ...job, \n    dedup_new: true,\n    dedup_store_size: totalSeen\n  } \n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        432,
+        0
+      ],
+      "id": "25082926-1463-44b9-8402-2bd040456259",
+      "name": "Deduplicate"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Candidate Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Jobs - JSearch": {
+      "main": [
+        [
+          {
+            "node": "Parse Jobs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Jobs": {
+      "main": [
+        [
+          {
+            "node": "Deduplicate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "Sort",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Score Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Score": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sort": {
+      "main": [
+        [
+          {
+            "node": "Prepare Digest Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Digest Prompt": {
+      "main": [
+        [
+          {
+            "node": "Generate Digest",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Email": {
+      "main": [
+        [
+          {
+            "node": "Send an Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Score Job": {
+      "main": [
+        [
+          {
+            "node": "Parse Score",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Digest": {
+      "main": [
+        [
+          {
+            "node": "Format Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Score Request": {
+      "main": [
+        [
+          {
+            "node": "Score Job",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Candidate Config": {
+      "main": [
+        [
+          {
+            "node": "Fetch Jobs - JSearch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Deduplicate": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "3a1805d5-e592-4cb8-afa0-e38d9bf2ddd3",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "9cd24e2acb13b7ecbb725fe24b5512cab2bfffcf1142c2d4e23d12645c6ff04c"
+  },
+  "nodeGroups": [],
+  "id": "lJHZJwteVaL0bsJE",
+  "tags": []
+}
